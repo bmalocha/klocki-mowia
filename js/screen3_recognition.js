@@ -1,0 +1,138 @@
+// Screen 3: Recognition Logic
+
+let s3_classifier;
+let s3_video;
+let s3_p5_instance;
+let s3_facingMode = "environment";
+let s3_isModelLoaded = false;
+let s3_lastResult = [];
+
+// UI Elements
+const inputModelFiles = document.getElementById('input-model-files');
+const modelStatus = document.getElementById('model-status');
+const resultsOverlay = document.getElementById('results-overlay');
+const btnToggleCamS3 = document.getElementById('btn-toggle-camera-s3');
+
+// Initialize ml5 Feature Extractor (empty, to load into)
+// We need to initialize it similar to Screen 2 but we will use .load()
+let s3_featureExtractor = ml5.featureExtractor('MobileNet', { numLabels: 2 }, () => {
+    console.log('MobileNet (S3) Loaded');
+});
+s3_classifier = s3_featureExtractor.classification();
+
+// Handle File Upload
+inputModelFiles.addEventListener('change', (event) => {
+    const files = event.target.files;
+    if (files.length === 0) return;
+
+    // ml5 load expects files. 
+    // Usage: classifier.load(files, callback)
+    modelStatus.innerText = "Loading model...";
+
+    // Convert FileList to Array if needed, or pass directly.
+    // ml5 documentation varies. Assuming standard support.
+    s3_classifier.load(files, () => {
+        modelStatus.innerText = "Model Loaded!";
+        s3_isModelLoaded = true;
+        s3_classify();
+    });
+});
+
+// Classification Loop
+function s3_classify() {
+    if (!s3_isModelLoaded || !s3_video) return;
+
+    // s3_video is a p5 element.
+    s3_classifier.classify(s3_video, (err, results) => {
+        if (err) {
+            console.error(err);
+            return;
+        }
+
+        s3_lastResult = results;
+        s3_updateOverlay(results);
+
+        // Loop
+        s3_classify();
+    });
+}
+
+function s3_updateOverlay(results) {
+    if (!results || results.length === 0) return;
+
+    // Sort just in case (ml5 usually returns sorted)
+    // results is array of {label, confidence}
+
+    let html = '';
+    // Take top 3
+    const top3 = results.slice(0, 3);
+
+    top3.forEach((res, index) => {
+        const conf = (res.confidence * 100).toFixed(1);
+        const style = index === 0 ? 'font-weight:bold; color:#4ade80;' : '';
+        html += `<div class="result-item" style="${style}">${res.label}: ${conf}%</div>`;
+    });
+
+    resultsOverlay.innerHTML = html;
+}
+
+// Camera Setup (p5 instance)
+const s3_sketch = (p) => {
+
+    p.setup = () => {
+        let canvas = p.createCanvas(320, 240);
+        canvas.parent('video-container-s3');
+        // Delay start or start immediately? 
+        // We'll start immediately for simplicity, 
+        // but user might need to toggle if it fails.
+        // s3_startCamera(); // Don't start automatically
+    };
+
+    p.draw = () => {
+        if (s3_video) {
+            p.image(s3_video, 0, 0, p.width, p.height);
+        }
+    };
+
+    window.s3_startCamera = () => {
+        if (s3_video) {
+            s3_video.remove();
+        }
+
+        const constraints = {
+            video: {
+                facingMode: { exact: s3_facingMode }
+            },
+            audio: false
+        };
+
+        s3_video = p.createCapture(constraints, function (stream) {
+            console.log("S3 Camera Started");
+            // If model is already loaded, restart classification
+            if (s3_isModelLoaded) {
+                s3_classify();
+            }
+        });
+
+        if (s3_video) {
+            s3_video.size(320, 240);
+            s3_video.hide();
+        }
+    };
+
+    window.s3_stopCamera = () => {
+        if (s3_video) {
+            s3_video.remove();
+            s3_video = null;
+        }
+    };
+};
+
+// Start p5
+s3_p5_instance = new p5(s3_sketch);
+
+// UI Events
+btnToggleCamS3.addEventListener('click', () => {
+    s3_facingMode = (s3_facingMode === "user") ? "environment" : "user";
+    if (window.s3_startCamera) window.s3_startCamera();
+});

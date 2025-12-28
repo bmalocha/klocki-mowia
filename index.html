@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KlockiMowia - Machine Learning for Figurines</title>
+    
+    <!-- Dependencies -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
+    <script src="https://unpkg.com/ml5@latest/dist/ml5.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="logo">KlockiMowia</div>
+        <div class="nav-links">
+            <button class="nav-btn active" data-target="screen-1">Data Collection</button>
+            <button class="nav-btn" data-target="screen-2">Training</button>
+            <button class="nav-btn" data-target="screen-3">Recognition</button>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="app-container">
+        
+        <!-- Screen 1: Data Collection -->
+        <section id="screen-1" class="screen active">
+            <div class="screen-header">
+                <h2>Data Collection</h2>
+                <p>Capture images to create your dataset.</p>
+            </div>
+            
+            <div class="content-grid">
+                <div class="video-wrapper">
+                    <div id="video-container-s1"></div>
+                    <button id="btn-toggle-camera-s1" class="icon-btn" title="Switch Camera">↻</button>
+                </div>
+                
+                <div class="controls-panel">
+                    <div class="input-group">
+                        <label for="input-label">Figurine Name</label>
+                        <input type="text" id="input-label" placeholder="e.g. Batman">
+                    </div>
+                    
+                    <div class="action-buttons">
+                        <button id="btn-scan" class="primary-btn">Scan</button>
+                        <div class="stats">Captured: <span id="capture-counter">0</span></div>
+                    </div>
+                    
+                    <hr>
+                    
+                    <button id="btn-next-class" class="secondary-btn">Add Next Figurine</button>
+                    <button id="btn-save-zip" class="success-btn">Save Scans (ZIP)</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Screen 2: Model Training -->
+        <section id="screen-2" class="screen">
+            <div class="screen-header">
+                <h2>Model Training</h2>
+                <p>Train the model with your collected data.</p>
+            </div>
+            
+            <div class="controls-panel center-panel">
+                <div class="upload-section">
+                    <label>1. Upload Dataset (Folder)</label>
+                    <input type="file" id="input-dataset" webkitdirectory directory multiple>
+                </div>
+
+                <div id="training-status-panel" class="status-list">
+                    <!-- Loaded classes will appear here -->
+                    <p class="placeholder-text">No data loaded.</p>
+                </div>
+                
+                <div class="training-actions">
+                    <button id="btn-train" class="primary-btn" disabled>Train Model</button>
+                    <div class="progress-bar-container">
+                        <div id="training-progress" class="progress-bar"></div>
+                    </div>
+                    <div id="loss-display">Loss: 0</div>
+                </div>
+                
+                <button id="btn-save-model" class="success-btn" disabled>Save Model</button>
+            </div>
+        </section>
+
+        <!-- Screen 3: Recognition -->
+        <section id="screen-3" class="screen">
+            <div class="screen-header">
+                <h2>Recognition</h2>
+                <p>Test your model in real-time.</p>
+            </div>
+            
+            <div class="content-grid">
+                <div class="video-wrapper">
+                    <div id="video-container-s3"></div>
+                    <div id="results-overlay" class="overlay">
+                        <!-- Results will be injected here -->
+                        <div class="result-item">Waiting for model...</div>
+                    </div>
+                    <button id="btn-toggle-camera-s3" class="icon-btn" title="Switch Camera">↻</button>
+                </div>
+                
+                <div class="controls-panel">
+                    <div class="upload-section">
+                        <label>Load Model (json + bin)</label>
+                        <input type="file" id="input-model-files" multiple>
+                    </div>
+                    <div id="model-status">Model not loaded</div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- App Logic -->
+    <script src="js/app.js"></script>
+    <script src="js/screen1_collection.js"></script>
+    <script src="js/screen2_training.js"></script>
+    <script src="js/screen3_recognition.js"></script>
+</body>
+</html>
