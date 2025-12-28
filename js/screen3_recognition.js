@@ -94,30 +94,56 @@ const s3_sketch = (p) => {
         }
     };
 
+    // Improved Camera Start with Fallback for Screen 3
     window.s3_startCamera = () => {
         if (s3_video) {
             s3_video.remove();
+            s3_video = null;
         }
 
-        const constraints = {
-            video: {
-                facingMode: { exact: s3_facingMode }
-            },
+        const strictConstraints = {
+            video: { facingMode: { exact: s3_facingMode } },
             audio: false
         };
 
-        s3_video = p.createCapture(constraints, function (stream) {
-            console.log("S3 Camera Started");
-            // If model is already loaded, restart classification
-            if (s3_isModelLoaded) {
-                s3_classify();
-            }
-        });
+        const looseConstraints = {
+            video: { facingMode: s3_facingMode },
+            audio: false
+        };
 
-        if (s3_video) {
+        const defaultConstraints = {
+            video: true,
+            audio: false
+        };
+
+        const launchP5Video = (validConstraints) => {
+            s3_video = p.createCapture(validConstraints, function (stream) {
+                console.log("S3 Camera Started with constraints:", validConstraints);
+                if (s3_isModelLoaded) {
+                    s3_classify();
+                }
+            });
             s3_video.size(320, 240);
             s3_video.hide();
-        }
+        };
+
+        navigator.mediaDevices.getUserMedia(strictConstraints.video)
+            .then(stream => {
+                stream.getTracks().forEach(t => t.stop());
+                launchP5Video(strictConstraints);
+            })
+            .catch(err => {
+                console.warn("S3 Strict constraints failed, trying loose...", err);
+                navigator.mediaDevices.getUserMedia(looseConstraints.video)
+                    .then(stream => {
+                        stream.getTracks().forEach(t => t.stop());
+                        launchP5Video(looseConstraints);
+                    })
+                    .catch(err2 => {
+                        console.warn("S3 Loose constraints failed, falling back to default...", err2);
+                        launchP5Video(defaultConstraints);
+                    });
+            });
     };
 
     window.s3_stopCamera = () => {

@@ -23,43 +23,57 @@ const s1_sketch = (p) => {
         }
     };
 
-    // Helper to start/restart camera with specific mode
+    // Improved Camera Start with Fallback
     window.s1_startCamera = () => {
         if (s1_video) {
-            s1_video.remove(); // stop existing stream
+            s1_video.remove();
+            s1_video = null;
         }
 
-        const constraints = {
-            video: {
-                facingMode: { exact: s1_facingMode }
-            },
+        const strictConstraints = {
+            video: { facingMode: { exact: s1_facingMode } },
             audio: false
         };
 
-        // Fallback or explicit constraint logic
-        // p5 createCapture accepts a constraints object
-        // Note: 'exact' facingMode often fails on desktop, so we need a try-catch equivalent or fallback.
-        // p5 doesn't easily let us catch getUserMedia errors directly in the constructor. 
-        // We will try standard constraints first.
+        const looseConstraints = {
+            video: { facingMode: s1_facingMode },
+            audio: false
+        };
 
-        // Handling "environment" preference with fallback is tricky in pure p5.
-        // We'll simplify: Ask for constraints. If it fails, users usually get default.
+        // Final fallback (e.g. for desktop webcam)
+        const defaultConstraints = {
+            video: true,
+            audio: false
+        };
 
-        // p5.js specific syntax for createCapture with constraints:
-        s1_video = p.createCapture(constraints, function (stream) {
-            // Success
-            console.log("Camera started");
-        });
-
-        // If that fails (e.g. on laptop with no Environment cam), p5 might error out console. 
-        // A more robust way is to just use standard createCapture(p.VIDEO) if not mobile.
-        // But for this requirement "Must handle errors... fallback", we might need to handle the promise manually if p5 exposed it, but p5 wraps it.
-        // For the MVP, we will try to pass the object. If s1_video doesn't initialize properly, p5 handles it somewhat gracefully usually.
-
-        if (s1_video) {
+        // Helper to launch p5 capture
+        const launchP5Video = (validConstraints) => {
+            s1_video = p.createCapture(validConstraints, function (stream) {
+                console.log("Camera started with constraints:", validConstraints);
+            });
             s1_video.size(320, 240);
-            s1_video.hide(); // Hide the DOM element, draw to canvas instead
-        }
+            s1_video.hide();
+        };
+
+        // Check constraints via raw API to handle errors gracefully before p5
+        navigator.mediaDevices.getUserMedia(strictConstraints.video)
+            .then(stream => {
+                // Strict works, stop this test stream and let p5 take over
+                stream.getTracks().forEach(t => t.stop());
+                launchP5Video(strictConstraints);
+            })
+            .catch(err => {
+                console.warn("Strict constraints failed, trying loose...", err);
+                navigator.mediaDevices.getUserMedia(looseConstraints.video)
+                    .then(stream => {
+                        stream.getTracks().forEach(t => t.stop());
+                        launchP5Video(looseConstraints);
+                    })
+                    .catch(err2 => {
+                        console.warn("Loose constraints failed, falling back to default...", err2);
+                        launchP5Video(defaultConstraints);
+                    });
+            });
     };
 
     window.s1_stopCamera = () => {
