@@ -111,8 +111,12 @@ btnTrain.addEventListener('click', () => {
     s2_classifier.train((lossValue) => {
         // While training
         if (lossValue) {
-            s2_loss = lossValue;
-            lossDisplay.innerText = `Loss: ${s2_loss.toFixed(6)}`;
+            if (typeof lossValue === 'number') {
+                s2_loss = lossValue;
+                lossDisplay.innerText = `Loss: ${s2_loss.toFixed(6)}`;
+            } else {
+                console.log('Loss:', lossValue); // Debug check
+            }
             // Visual feedback could be a graph or just text
         } else {
             // Finished (lossValue is null)
