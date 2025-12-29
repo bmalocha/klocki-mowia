@@ -14,22 +14,54 @@ const resultsOverlay = document.getElementById('results-overlay');
 const btnToggleCamS3 = document.getElementById('btn-toggle-camera-s3');
 
 // Initialize ml5 Feature Extractor
-let s3_featureExtractor = ml5.featureExtractor('MobileNet', { numLabels: 2 }, () => {
-    console.log('MobileNet (S3) Loaded');
+// Initialize ml5 Feature Extractor
+async function s3_initAndLoadModel() {
+    console.log("Ala ma kota");
+    try {
+        modelStatus.innerText = "Checking model configuration...";
 
-    // Auto-load the custom model
-    s3_classifier = s3_featureExtractor.classification();
-    modelStatus.innerText = "Loading custom model...";
+        // 1. Fetch model.json to find class count
+        const response = await fetch('./model/model.json');
+        if (!response.ok) throw new Error('Could not load model.json');
 
-    // Load from default path
-    s3_classifier.load('./model/model.json', () => {
-        console.log('Custom Model Loaded');
-        modelStatus.innerText = "Model Loaded!";
-        s3_isModelLoaded = true;
-        s3_classify();
-    });
-});
-// Note: s3_classifier is assigned above inside the callback now used to be here.
+        const modelJson = await response.json();
+        let numLabels = 2; // Default
+
+        if (modelJson.ml5Specs && modelJson.ml5Specs.mapStringToIndex) {
+            numLabels = modelJson.ml5Specs.mapStringToIndex.length;
+            console.log(`Found ${numLabels} classes in model metadata:`, modelJson.ml5Specs.mapStringToIndex);
+        } else {
+            console.warn("No ml5Specs found in model.json, defaulting to 2 classes.");
+        }
+
+        // 2. Initialize Extractor with correct numLabels
+        // ml5 syntax: featureExtractor('MobileNet', options, callback)
+        s3_featureExtractor = ml5.featureExtractor('MobileNet', { numLabels: numLabels }, () => {
+            console.log(`MobileNet (S3) Loaded with ${numLabels} labels`);
+
+            // 3. Load Custom Model
+            s3_classifier = s3_featureExtractor.classification();
+            modelStatus.innerText = "Loading custom model weights...";
+
+            // Explicitly set numClasses key if needed
+            s3_featureExtractor.numClasses = numLabels;
+
+            s3_classifier.load('./model/model.json', () => {
+                console.log('Custom Model Loaded');
+                modelStatus.innerText = "Model Loaded!";
+                s3_isModelLoaded = true;
+                s3_classify();
+            });
+        });
+
+    } catch (err) {
+        console.error("Error init model s3:", err);
+        modelStatus.innerText = "Error loading model: " + err.message;
+    }
+}
+
+// Start Init
+s3_initAndLoadModel();
 
 // Handle File Upload - REMOVED
 // inputModelFiles.addEventListener('change', ...);
