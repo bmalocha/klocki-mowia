@@ -103,13 +103,18 @@
             </div>
 
             <div class="content-grid">
-                <div class="video-wrapper">
-                    <div id="video-container-s3"></div>
-                    <div id="results-overlay" class="overlay">
-                        <!-- Results will be injected here -->
-                        <div class="result-item">Waiting for model...</div>
+                <div class="recognition-main-col">
+                    <div id="high-confidence-display"
+                        style="text-align: center; font-size: 1.5rem; font-weight: bold; margin-bottom: 1rem; min-height: 2rem;">
                     </div>
-                    <button id="btn-toggle-camera-s3" class="icon-btn" title="Switch Camera">↻</button>
+                    <div class="video-wrapper">
+                        <div id="video-container-s3"></div>
+                        <div id="results-overlay" class="overlay">
+                            <!-- Results will be injected here -->
+                            <div class="result-item">Waiting for model...</div>
+                        </div>
+                        <button id="btn-toggle-camera-s3" class="icon-btn" title="Switch Camera">↻</button>
+                    </div>
                 </div>
 
                 <div class="upload-section" style="display:none;">

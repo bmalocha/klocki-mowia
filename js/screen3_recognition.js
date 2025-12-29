@@ -11,6 +11,7 @@ let s3_lastResult = [];
 const inputModelFiles = document.getElementById('input-model-files');
 const modelStatus = document.getElementById('model-status');
 const resultsOverlay = document.getElementById('results-overlay');
+const highConfDisplay = document.getElementById('high-confidence-display');
 const btnToggleCamS3 = document.getElementById('btn-toggle-camera-s3');
 
 // Initialize ml5 Feature Extractor
@@ -102,6 +103,19 @@ function s3_updateOverlay(results) {
     });
 
     resultsOverlay.innerHTML = html;
+
+    // Check for high confidence (>= 85%)
+    if (results.length > 0) {
+        const topResult = results[0];
+        const confidence = topResult.confidence * 100;
+
+        if (confidence >= 85) {
+            highConfDisplay.innerText = `${topResult.label} (${confidence.toFixed(1)}%)`;
+            highConfDisplay.style.color = '#22c55e'; // success green
+        } else {
+            highConfDisplay.innerText = '';
+        }
+    }
 }
 
 // Camera Setup (p5 instance)
