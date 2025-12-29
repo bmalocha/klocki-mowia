@@ -13,30 +13,26 @@ const modelStatus = document.getElementById('model-status');
 const resultsOverlay = document.getElementById('results-overlay');
 const btnToggleCamS3 = document.getElementById('btn-toggle-camera-s3');
 
-// Initialize ml5 Feature Extractor (empty, to load into)
-// We need to initialize it similar to Screen 2 but we will use .load()
+// Initialize ml5 Feature Extractor
 let s3_featureExtractor = ml5.featureExtractor('MobileNet', { numLabels: 2 }, () => {
     console.log('MobileNet (S3) Loaded');
-});
-s3_classifier = s3_featureExtractor.classification();
 
-// Handle File Upload
-inputModelFiles.addEventListener('change', (event) => {
-    const files = event.target.files;
-    if (files.length === 0) return;
+    // Auto-load the custom model
+    s3_classifier = s3_featureExtractor.classification();
+    modelStatus.innerText = "Loading custom model...";
 
-    // ml5 load expects files. 
-    // Usage: classifier.load(files, callback)
-    modelStatus.innerText = "Loading model...";
-
-    // Convert FileList to Array if needed, or pass directly.
-    // ml5 documentation varies. Assuming standard support.
-    s3_classifier.load(files, () => {
+    // Load from default path
+    s3_classifier.load('./model/model.json', () => {
+        console.log('Custom Model Loaded');
         modelStatus.innerText = "Model Loaded!";
         s3_isModelLoaded = true;
         s3_classify();
     });
 });
+// Note: s3_classifier is assigned above inside the callback now used to be here.
+
+// Handle File Upload - REMOVED
+// inputModelFiles.addEventListener('change', ...);
 
 // Classification Loop
 function s3_classify() {
