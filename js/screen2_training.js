@@ -14,15 +14,24 @@ const progressEl = document.getElementById('training-progress');
 const lossDisplay = document.getElementById('loss-display');
 
 // Initialize ml5 Feature Extractor
-function s2_initModel() {
-    // using MobileNet without default regression (we want classification)
-    // ml5 syntax: featureExtractor('MobileNet', options, callback)
-    s2_featureExtractor = ml5.featureExtractor('MobileNet', { numLabels: 2 }, () => {
-        console.log('MobileNet Loaded');
-        s2_isModelReady = true;
+// Initialize ml5 Feature Extractor
+function s2_initModel(numLabels = 2) {
+    return new Promise((resolve) => {
+        // using MobileNet without default regression (we want classification)
+        // ml5 syntax: featureExtractor('MobileNet', options, callback)
+        const options = { numLabels: numLabels };
+        s2_featureExtractor = ml5.featureExtractor('MobileNet', options, () => {
+            console.log(`MobileNet Loaded with ${numLabels} labels`);
+            s2_isModelReady = true;
+            resolve();
+        });
+
+        // Explicitly set numClasses as suggested by user
+        s2_featureExtractor.numClasses = numLabels;
+
+        // Create a classifier from the extractor
+        s2_classifier = s2_featureExtractor.classification();
     });
-    // Create a classifier from the extractor
-    s2_classifier = s2_featureExtractor.classification();
 }
 
 // Load Dataset
@@ -31,7 +40,10 @@ inputDataset.addEventListener('change', async (event) => {
     if (!files || files.length === 0) return;
 
     // Reset
-    s2_initModel(); // Re-init to clear previous data? ml5 doesn't have a clear() easily. Best to re-create.
+    // Reset
+    // We will re-init model later after counting labels
+    s2_classifier = null;
+    s2_isModelReady = false;
     trainingStatusPanel.innerHTML = '<p>Loading images...</p>';
     btnTrain.disabled = true;
     btnSaveModel.disabled = true;
@@ -57,9 +69,15 @@ inputDataset.addEventListener('change', async (event) => {
         dataByLabel[label].push(file);
     });
 
+    // Determine number of classes and Re-init Model
+    const labels = Object.keys(dataByLabel);
+    const numClasses = labels.length;
+
+    trainingStatusPanel.innerHTML = '<p>Initializing model matrix...</p>';
+    await s2_initModel(numClasses);
+
     // UI Update
     trainingStatusPanel.innerHTML = '';
-    const labels = Object.keys(dataByLabel);
     labels.forEach(l => {
         const div = document.createElement('div');
         div.className = 'class-item';
