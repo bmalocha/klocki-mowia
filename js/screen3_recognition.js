@@ -16,13 +16,17 @@ const btnToggleCamS3 = document.getElementById('btn-toggle-camera-s3');
 
 // Initialize ml5 Feature Extractor
 // Initialize ml5 Feature Extractor
+// Initialize ml5 Feature Extractor
 async function s3_initAndLoadModel() {
-    console.log("Ala ma kota");
+    console.log("Initializing Model Screen 3...");
     try {
         modelStatus.innerText = "Checking model configuration...";
 
+        // Anti-caching timestamp
+        const cacheBuster = '?t=' + new Date().getTime();
+
         // 1. Fetch model.json to find class count
-        const response = await fetch('./model/model.json');
+        const response = await fetch('./model/model.json' + cacheBuster);
         if (!response.ok) throw new Error('Could not load model.json');
 
         const modelJson = await response.json();
@@ -47,7 +51,7 @@ async function s3_initAndLoadModel() {
             // Explicitly set numClasses key if needed
             s3_featureExtractor.numClasses = numLabels;
 
-            s3_classifier.load('./model/model.json', () => {
+            s3_classifier.load('./model/model.json' + cacheBuster, () => {
                 console.log('Custom Model Loaded');
                 modelStatus.innerText = "Model Loaded!";
                 s3_isModelLoaded = true;
