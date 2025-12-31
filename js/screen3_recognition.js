@@ -7,6 +7,10 @@ let s3_facingMode = "environment";
 let s3_isModelLoaded = false;
 let s3_lastResult = [];
 
+// Audio State
+let s3_isAudioPlaying = false;
+let s3_lastPlayedClass = "";
+
 // UI Elements
 const inputModelFiles = document.getElementById('input-model-files');
 const modelStatus = document.getElementById('model-status');
@@ -15,8 +19,7 @@ const highConfDisplay = document.getElementById('high-confidence-display');
 const btnToggleCamS3 = document.getElementById('btn-toggle-camera-s3');
 
 // Initialize ml5 Feature Extractor
-// Initialize ml5 Feature Extractor
-// Initialize ml5 Feature Extractor
+// ... (previous initialization code) ...
 async function s3_initAndLoadModel() {
     console.log("Initializing Model Screen 3...");
     try {
@@ -91,6 +94,11 @@ function s3_classify() {
 }
 
 function s3_updateOverlay(results) {
+    // 1. Audio Lock: If audio is playing, ignore new results
+    if (s3_isAudioPlaying) {
+        return;
+    }
+
     if (!results || results.length === 0) return;
 
     // Sort just in case (ml5 usually returns sorted)
@@ -116,10 +124,137 @@ function s3_updateOverlay(results) {
         if (confidence >= 85) {
             highConfDisplay.innerText = `${topResult.label} (${confidence.toFixed(1)}%)`;
             highConfDisplay.style.color = '#22c55e'; // success green
+
+            // 2. Trigger Audio if Class Changes
+            if (topResult.label !== s3_lastPlayedClass) {
+                console.log(`Class changed: ${s3_lastPlayedClass} -> ${topResult.label} (Conf: ${confidence.toFixed(1)}%)`);
+                s3_lastPlayedClass = topResult.label;
+                s3_playAudio(topResult.label);
+            }
         } else {
             highConfDisplay.innerText = '';
+            // If confidence drops below threshold, we MIGHT want to reset lastPlayedClass
+            // so if they show it again it plays again?
+            // Spec says: "If detection changes... audio is played."
+            // "Cow -> Cow -> Cow ... plays once."
+            // "Cow -> Noise/LowConf -> Cow" ... ?
+            // Usually simpler to NOT reset on noise, only on different valid class.
+            // But if user puts object down and picks it up again, they might expect sound.
+            // For now, adhering strictly to "Trigger on Class Change".
+            // If we want re-trigger after silence, we'd clear s3_lastPlayedClass here.
         }
     }
+}
+
+// Audio Playback Logic
+function s3_playAudio(className) {
+    if (s3_isAudioPlaying) return;
+
+    s3_isAudioPlaying = true;
+    console.log(`[Audio] Attempting to play sound for: ${className}`);
+
+    // Session Storage Key for Round Robin
+    const storageKey = `s3_audio_index_${className}`;
+    let currentIndex = parseInt(sessionStorage.getItem(storageKey)) || 1;
+
+    // Construct filename: {class}{index}.mp3
+    // E.g. cow1.mp3
+    // Note: User files might be just "cow.mp3" if they haven't followed the new spec yet.
+    // We'll try the indexed version first.
+
+    // Create Audio Object
+    // We need to handle the case where file doesn't exist.
+    // HTML5 Audio doesn't throw on creation, but on play() or error event.
+
+    let audioSrc = `./media/${className}${currentIndex}.mp3`;
+    let audio = new Audio(audioSrc);
+
+    // Error Handling / Fallback / Round Robin Loop
+    audio.onerror = () => {
+        console.warn(`[Audio] File not found or error: ${audioSrc}`);
+
+        // Strategy:
+        // 1. If index > 1, it means we ran out of files in the sequence. Reset to 1 and try again.
+        // 2. If index == 1, maybe the user didn't use numbers. Try without number.
+
+        if (currentIndex > 1) {
+            console.log("[Audio] End of sequence reached? Resetting to 1.");
+            currentIndex = 1;
+            sessionStorage.setItem(storageKey, currentIndex);
+            // Recursively try again with index 1 (prevent infinite loop with safeguards?)
+            // A simple way is to just define a new source and try once more.
+            audioSrc = `./media/${className}1.mp3`;
+            audio = new Audio(audioSrc);
+
+            // Re-attach error handler for the retry
+            audio.onerror = () => {
+                // Try fallback: plain filename
+                console.log("[Audio] Index 1 failed. Trying plain filename...");
+                audioSrc = `./media/${className}.mp3`;
+                audio = new Audio(audioSrc);
+                audio.play().catch(e => {
+                    console.error("[Audio] All attempts failed.", e);
+                    s3_isAudioPlaying = false; // Release lock
+                });
+                // Attach success handler to the fallback
+                audio.onended = () => s3_handleAudioEnd(className, currentIndex);
+            }
+
+            // Try playing the reset index
+            audio.play().catch(e => {
+                console.error("[Audio] Retry play failed", e);
+                s3_isAudioPlaying = false;
+            });
+            audio.onended = () => s3_handleAudioEnd(className, currentIndex);
+
+        } else {
+            // Index is 1 and failed. Try plain filename.
+            console.log("[Audio] Index 1 missing. Trying plain filename...");
+            audioSrc = `./media/${className}.mp3`;
+            audio = new Audio(audioSrc);
+
+            audio.onerror = (e) => {
+                console.error("[Audio] Plain filename also failed. No audio for this class.", e);
+                s3_isAudioPlaying = false; // Release lock
+            }
+
+            audio.play().catch(e => {
+                console.error("[Audio] Play failed", e);
+                s3_isAudioPlaying = false;
+            });
+            audio.onended = () => s3_handleAudioEnd(className, currentIndex);
+        }
+    };
+
+    audio.onended = () => s3_handleAudioEnd(className, currentIndex);
+
+    // Start
+    audio.play().catch(e => {
+        console.error("[Audio] Playback interrupted or failed", e);
+        // Ensure lock is released if play fails immediately
+        // (e.g. browser policy blocking autoplay)
+        s3_isAudioPlaying = false;
+    });
+}
+
+function s3_handleAudioEnd(className, playedIndex) {
+    console.log("[Audio] Playback finished.");
+    s3_isAudioPlaying = false; // Unlock
+
+    // Increment index for next time
+    // We assume the file played successfully if we got here.
+    // If we played a fallback (no number), incrementing implies we might look for #2 next time?
+    // If we played #1, next is #2.
+    // If we played #Max, next will be #Max+1, which will fail next time and reset to #1.
+    // This implements the loop implicitly.
+
+    // Note: If we played the "plain" file because #1 was missing, 
+    // we should probably NOT increment, or maybe assume only 1 file exists.
+    // But keeping it simple: just increment.
+
+    const storageKey = `s3_audio_index_${className}`;
+    const nextIndex = playedIndex + 1;
+    sessionStorage.setItem(storageKey, nextIndex);
 }
 
 // Camera Setup (p5 instance)
