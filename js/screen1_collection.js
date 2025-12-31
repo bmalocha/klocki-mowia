@@ -89,6 +89,19 @@ const s1_sketch = (p) => {
 // Initialize p5 instance
 s1_p5_instance = new p5(s1_sketch);
 
+// Helper to get formatted timestamp YYYYMMDD-HHMMSS
+function getTimestamp() {
+    const now = new Date();
+    const pad = (n) => n.toString().padStart(2, '0');
+    const y = now.getFullYear();
+    const m = pad(now.getMonth() + 1);
+    const d = pad(now.getDate());
+    const h = pad(now.getHours());
+    const min = pad(now.getMinutes());
+    const s = pad(now.getSeconds());
+    return `${y}${m}${d}-${h}${min}${s}`;
+}
+
 // --- UI Interaction ---
 
 const btnToggleCamS1 = document.getElementById('btn-toggle-camera-s1');
@@ -166,13 +179,15 @@ btnSaveZip.addEventListener('click', () => {
         return;
     }
 
+    const timestamp = getTimestamp();
+
     labels.forEach(label => {
         const folder = zip.folder(label);
         const images = s1_data[label];
         images.forEach((imgData, index) => {
             // imgData is "data:image/png;base64,....."
             const base64Data = imgData.split(',')[1];
-            folder.file(`${label}_${index}.png`, base64Data, { base64: true });
+            folder.file(`${timestamp}_${label}_${index}.png`, base64Data, { base64: true });
         });
     });
 
@@ -183,7 +198,7 @@ btnSaveZip.addEventListener('click', () => {
             const a = document.createElement("a");
             const url = URL.createObjectURL(content);
             a.href = url;
-            a.download = "klockimowia_dataset.zip";
+            a.download = `${timestamp}_klockimowia_dataset.zip`;
             document.body.appendChild(a);
             a.click();
             setTimeout(() => {
