@@ -160,7 +160,7 @@ function s3_updateOverlay(results) {
 
 // Audio Playback Logic
 function s3_playAudio(className) {
-    if (s3_isAudioPlaying) return;
+    if (s3_isAudioPlaying || className=="None") return;
 
     s3_isAudioPlaying = true;
     console.log(`[Audio] Attempting to play sound for: ${className}`);
