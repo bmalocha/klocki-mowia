@@ -11,6 +11,10 @@ let s3_lastResult = [];
 let s3_isAudioPlaying = false;
 let s3_lastPlayedClass = "";
 
+// CPU Optimization: Frame Skipping
+let s3_frameCounter = 0;
+const S3_FRAME_SKIP = 5;
+
 // UI Elements
 const inputModelFiles = document.getElementById('input-model-files');
 const modelStatus = document.getElementById('model-status');
@@ -78,10 +82,18 @@ s3_initAndLoadModel();
 function s3_classify() {
     if (!s3_isModelLoaded || !s3_video) return;
 
+    // CPU Optimization: Only classify every 5th frame
+    s3_frameCounter++;
+    if (s3_frameCounter % S3_FRAME_SKIP !== 0) {
+        requestAnimationFrame(s3_classify);
+        return;
+    }
+
     // s3_video is a p5 element.
     s3_classifier.classify(s3_video, (err, results) => {
         if (err) {
             console.error(err);
+            requestAnimationFrame(s3_classify); // Still loop on error
             return;
         }
 
