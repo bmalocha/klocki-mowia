@@ -56,7 +56,7 @@ const s1_sketch = (p) => {
         };
 
         // Check constraints via raw API to handle errors gracefully before p5
-        navigator.mediaDevices.getUserMedia(strictConstraints.video)
+        navigator.mediaDevices.getUserMedia(strictConstraints)
             .then(stream => {
                 // Strict works, stop this test stream and let p5 take over
                 stream.getTracks().forEach(t => t.stop());
@@ -64,7 +64,7 @@ const s1_sketch = (p) => {
             })
             .catch(err => {
                 console.warn("Strict constraints failed, trying loose...", err);
-                navigator.mediaDevices.getUserMedia(looseConstraints.video)
+                navigator.mediaDevices.getUserMedia(looseConstraints)
                     .then(stream => {
                         stream.getTracks().forEach(t => t.stop());
                         launchP5Video(looseConstraints);

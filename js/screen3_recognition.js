@@ -160,7 +160,7 @@ function s3_updateOverlay(results) {
 
 // Audio Playback Logic
 function s3_playAudio(className) {
-    if (s3_isAudioPlaying || className=="None") return;
+    if (s3_isAudioPlaying || className == "None") return;
 
     s3_isAudioPlaying = true;
     console.log(`[Audio] Attempting to play sound for: ${className}`);
@@ -320,14 +320,14 @@ const s3_sketch = (p) => {
             s3_video.hide();
         };
 
-        navigator.mediaDevices.getUserMedia(strictConstraints.video)
+        navigator.mediaDevices.getUserMedia(strictConstraints)
             .then(stream => {
                 stream.getTracks().forEach(t => t.stop());
                 launchP5Video(strictConstraints);
             })
             .catch(err => {
                 console.warn("S3 Strict constraints failed, trying loose...", err);
-                navigator.mediaDevices.getUserMedia(looseConstraints.video)
+                navigator.mediaDevices.getUserMedia(looseConstraints)
                     .then(stream => {
                         stream.getTracks().forEach(t => t.stop());
                         launchP5Video(looseConstraints);
